@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTTP Proxy Server</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>HTTP Web Proxy Server</span>
+                </div>
+            </div>
+            <ul class="sidebar-nav">
+                <li class="nav-item active">
+                    <a href="{{ url_for('index') }}" class="nav-link">
+                        <i class="fas fa-tachometer-alt"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('logs') }}" class="nav-link">
+                        <i class="fas fa-list-alt"></i>
+                        <span>Request Logs</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('cache_view') }}" class="nav-link">
+                        <i class="fas fa-database"></i>
+                        <span>Cache Manager</span>
+                    </a>
+                </li>
+            </ul>
+            <div class="sidebar-footer">
+                <div class="server-status">
+                    <div class="status-indicator {{ 'running' if stats.is_running else 'stopped' }}"></div>
+                    <span>{{ 'Server Running' if stats.is_running else 'Server Stopped' }}</span>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="content-header">
+                <div class="header-left">
+                    <h1>Proxy Server Dashboard</h1>
+                    <p class="subtitle">Monitor and manage your HTTP proxy server in real-time</p>
+                </div>
+                <div class="header-right">
+                    <div class="server-info">
+                        <i class="fas fa-server"></i>
+                        <span>{{ stats.server_address }}</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Stats Cards -->
+            <div class="stats-grid">
+                <div class="stat-card primary">
+                    <div class="stat-icon">
+                        <i class="fas fa-exchange-alt"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3>Total Requests</h3>
+                        <div class="stat-value">{{ stats.total_requests }}</div>
+                        <div class="stat-trend">
+                            <i class="fas fa-chart-line"></i>
+                            <span>Real-time tracking</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stat-card success">
+                    <div class="stat-icon">
+                        <i class="fas fa-database"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3>Cached Items</h3>
+                        <div class="stat-value">{{ cache_stats.total_cached }}</div>
+                        <div class="stat-subtext">{{ cache_stats.cache_size_kb }} kB</div>
+                    </div>
+                    <a href="{{ url_for('cache_view') }}" class="stat-action">
+                        <i class="fas fa-external-link-alt"></i>
+                    </a>
+                </div>
+
+                <div class="stat-card warning">
+                    <div class="stat-icon">
+                        <i class="fas fa-ban"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3>Blocked Domains</h3>
+                        <div class="stat-value">{{ stats.blocked_domains }}</div>
+                        <div class="stat-subtext">Access restricted</div>
+                    </div>
+                </div>
+
+                <div class="stat-card info">
+                    <div class="stat-icon">
+                        <i class="fas fa-bolt"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3>Cache Status</h3>
+                        <div class="stat-value">{{ 'Enabled' if proxy_server.cache_enabled else 'Disabled' }}</div>
+                        <div class="stat-subtext">Performance mode</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Control Panels -->
+            <div class="panels-grid">
+                <!-- Quick Actions Panel -->
+                <div class="panel quick-actions">
+                    <div class="panel-header">
+                        <h2><i class="fas fa-rocket"></i> Quick Actions</h2>
+                    </div>
+                    <div class="panel-content">
+                        <div class="action-buttons">
+                            <button id="clearCacheBtn" class="btn btn-warning">
+                                <i class="fas fa-broom"></i>
+                                Clear Cache
+                            </button>
+                            <button id="addTestDataBtn" class="btn btn-info">
+                                <i class="fas fa-vial"></i>
+                                Add Test Data
+                            </button>
+                            <div class="toggle-group">
+                                <label class="toggle-label">
+                                    <input type="checkbox" id="cacheToggle" {{ 'checked' if proxy_server.cache_enabled else '' }}>
+                                    <span class="toggle-slider"></span>
+                                    <span class="toggle-text">Cache Enabled</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Domain Management Panel -->
+                <div class="panel domain-management">
+                    <div class="panel-header">
+                        <h2><i class="fas fa-shield-alt"></i> Domain Management</h2>
+                    </div>
+                    <div class="panel-content">
+                        <div class="blocked-list">
+                            <h3>Blocked Domains</h3>
+                            {% if blocked_domains %}
+                            <div class="domain-list">
+                                {% for domain in blocked_domains %}
+                                <div class="domain-item">
+                                    <span class="domain-name">{{ domain }}</span>
+                                    <button class="btn btn-sm btn-danger unblock-btn" data-domain="{{ domain }}">
+                                        <i class="fas fa-unlock"></i>
+                                    </button>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <div class="empty-state">
+                                <i class="fas fa-check-circle"></i>
+                                <p>No domains blocked</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="add-domain-form">
+                            <div class="input-group">
+                                <input type="text" id="newDomain" placeholder="Enter domain to block (e.g., example.com)" class="form-input">
+                                <button id="blockDomainBtn" class="btn btn-danger">
+                                    <i class="fas fa-ban"></i>
+                                    Block
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="panel recent-activity">
+                <div class="panel-header">
+                    <h2><i class="fas fa-clock"></i> Recent Activity</h2>
+                    <a href="{{ url_for('logs') }}" class="btn btn-secondary btn-sm">
+                        View All
+                        <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+                <div class="panel-content">
+                    {% if recent_logs %}
+                    <div class="activity-list">
+                        {% for log in recent_logs %}
+                        <div class="activity-item">
+                            <div class="activity-icon {{ log.method.lower() }}">
+                                <i class="fas fa-{{ 'download' if log.method == 'GET' else 'upload' if log.method == 'POST' else 'exchange-alt' }}"></i>
+                            </div>
+                            <div class="activity-content">
+                                <div class="activity-main">
+                                    <span class="activity-method {{ log.method.lower() }}">{{ log.method }}</span>
+                                    <span class="activity-url">{{ log.url }}</span>
+                                </div>
+                                <div class="activity-meta">
+                                    <span class="activity-time">{{ log.timestamp }}</span>
+                                    <span class="activity-status status-{{ log.status_code // 100 }}">{{ log.status_code }}</span>
+                                    <span class="activity-size">{{ log.response_size }} bytes</span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="empty-state">
+                        <i class="fas fa-inbox"></i>
+                        <p>No recent activity</p>
+                        <small>Proxy requests will appear here</small>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Cache Management
+        document.getElementById('clearCacheBtn').addEventListener('click', function() {
+            if (confirm('Are you sure you want to clear all cached data?')) {
+                fetch('/api/clear_cache', { method: 'POST' })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            showNotification('Cache cleared successfully', 'success');
+                            setTimeout(() => location.reload(), 1000);
+                        }
+                    });
+            }
+        });
+
+        document.getElementById('addTestDataBtn').addEventListener('click', function() {
+            fetch('/api/add_test_cache', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showNotification('Test cache data added successfully', 'success');
+                        setTimeout(() => location.reload(), 1000);
+                    }
+                });
+        });
+
+        // Cache Toggle
+        document.getElementById('cacheToggle').addEventListener('change', function() {
+            fetch('/api/toggle_cache', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: 'enabled=' + this.checked
+            }).then(() => {
+                showNotification('Cache ' + (this.checked ? 'enabled' : 'disabled'), 'info');
+            });
+        });
+
+        // Domain Management
+        document.getElementById('blockDomainBtn').addEventListener('click', function() {
+            const domain = document.getElementById('newDomain').value.trim();
+            if (domain) {
+                fetch('/api/block_domain', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: 'domain=' + encodeURIComponent(domain)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showNotification('Domain ' + domain + ' blocked successfully', 'success');
+                        document.getElementById('newDomain').value = '';
+                        setTimeout(() => location.reload(), 1000);
+                    }
+                });
+            } else {
+                showNotification('Please enter a domain name', 'error');
+            }
+        });
+
+        document.querySelectorAll('.unblock-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const domain = this.getAttribute('data-domain');
+                if (domain && confirm('Unblock ' + domain + '?')) {
+                    fetch('/api/unblock_domain', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: 'domain=' + encodeURIComponent(domain)
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            showNotification('Domain ' + domain + ' unblocked', 'success');
+                            setTimeout(() => location.reload(), 1000);
+                        }
+                    });
+                }
+            });
+        });
+
+        // Auto-refresh stats
+        setInterval(() => {
+            fetch('/api/stats')
+                .then(response => response.json())
+                .then(data => {
+                    // Update total requests with animation
+                    const requestElement = document.querySelector('.stat-card.primary .stat-value');
+                    if (requestElement.textContent != data.total_requests) {
+                        requestElement.style.transform = 'scale(1.1)';
+                        setTimeout(() => {
+                            requestElement.textContent = data.total_requests;
+                            requestElement.style.transform = 'scale(1)';
+                        }, 200);
+                    }
+                });
+        }, 3000);
+
+        // Notification system
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification notification-${type}`;
+            notification.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check' : type === 'error' ? 'exclamation' : 'info'}-circle"></i>
+                <span>${message}</span>
+                <button onclick="this.parentElement.remove()">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            
+            document.body.appendChild(notification);
+            setTimeout(() => notification.classList.add('show'), 100);
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => notification.remove(), 300);
+            }, 4000);
+        }
+
+        // Mobile sidebar toggle
+        document.addEventListener('DOMContentLoaded', function() {
+            const sidebar = document.querySelector('.sidebar');
+            const mainContent = document.querySelector('.main-content');
+            
+            // Add mobile menu button
+            const menuBtn = document.createElement('button');
+            menuBtn.className = 'mobile-menu-btn';
+            menuBtn.innerHTML = '<i class="fas fa-bars"></i>';
+            document.querySelector('.content-header').prepend(menuBtn);
+            
+            menuBtn.addEventListener('click', function() {
+                sidebar.classList.toggle('mobile-open');
+                mainContent.classList.toggle('sidebar-open');
+            });
+        });
+    </script>
+</body>
+</html>

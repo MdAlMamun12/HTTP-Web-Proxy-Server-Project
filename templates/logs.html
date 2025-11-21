@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Request Logs - Proxy Server</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>HTTP Web Proxy Server</span>
+                </div>
+            </div>
+            <ul class="sidebar-nav">
+                <li class="nav-item">
+                    <a href="{{ url_for('index') }}" class="nav-link">
+                        <i class="fas fa-tachometer-alt"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item active">
+                    <a href="{{ url_for('logs') }}" class="nav-link">
+                        <i class="fas fa-list-alt"></i>
+                        <span>Request Logs</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('cache_view') }}" class="nav-link">
+                        <i class="fas fa-database"></i>
+                        <span>Cache Manager</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <main class="main-content">
+            <header class="content-header">
+                <div class="header-left">
+                    <h1>Request Logs</h1>
+                    <p class="subtitle">Detailed history of all proxy requests</p>
+                </div>
+                <div class="header-actions">
+                    <a href="{{ url_for('index') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i>
+                        Back to Dashboard
+                    </a>
+                </div>
+            </header>
+
+            <div class="panel">
+                <div class="panel-header">
+                    <h2><i class="fas fa-history"></i> Recent Requests ({{ logs|length }} total)</h2>
+                    <div class="panel-actions">
+                        <button class="btn btn-secondary btn-sm" onclick="location.reload()">
+                            <i class="fas fa-sync-alt"></i>
+                            Refresh
+                        </button>
+                    </div>
+                </div>
+                <div class="panel-content">
+                    {% if logs %}
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>Client IP</th>
+                                    <th>Method</th>
+                                    <th>URL</th>
+                                    <th>Status</th>
+                                    <th>Size</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for log in logs %}
+                                <tr>
+                                    <td class="timestamp">{{ log.timestamp }}</td>
+                                    <td class="ip-address">{{ log.client_ip }}</td>
+                                    <td>
+                                        <span class="method-badge {{ log.method.lower() }}">
+                                            <i class="fas fa-{{ 'download' if log.method == 'GET' else 'upload' if log.method == 'POST' else 'exchange-alt' }}"></i>
+                                            {{ log.method }}
+                                        </span>
+                                    </td>
+                                    <td class="url-cell">{{ log.url }}</td>
+                                    <td>
+                                        <span class="status-badge status-{{ log.status_code // 100 }}">
+                                            {{ log.status_code }}
+                                        </span>
+                                    </td>
+                                    <td class="size">{{ log.response_size }} bytes</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="empty-state">
+                        <i class="fas fa-inbox"></i>
+                        <h3>No Request Logs</h3>
+                        <p>Proxy requests will appear here once traffic starts flowing through your server.</p>
+                        <a href="{{ url_for('index') }}" class="btn btn-primary">
+                            <i class="fas fa-tachometer-alt"></i>
+                            Go to Dashboard
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cache Manager - Proxy Server</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>HTTP Web Proxy Server</span>
+                </div>
+            </div>
+            <ul class="sidebar-nav">
+                <li class="nav-item">
+                    <a href="{{ url_for('index') }}" class="nav-link">
+                        <i class="fas fa-tachometer-alt"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('logs') }}" class="nav-link">
+                        <i class="fas fa-list-alt"></i>
+                        <span>Request Logs</span>
+                    </a>
+                </li>
+                <li class="nav-item active">
+                    <a href="{{ url_for('cache_view') }}" class="nav-link">
+                        <i class="fas fa-database"></i>
+                        <span>Cache Manager</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <main class="main-content">
+            <header class="content-header">
+                <div class="header-left">
+                    <h1>Cache Manager</h1>
+                    <p class="subtitle">Manage and monitor cached responses</p>
+                </div>
+                <div class="header-actions">
+                    <a href="{{ url_for('index') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i>
+                        Back to Dashboard
+                    </a>
+                </div>
+            </header>
+
+            <!-- Cache Statistics -->
+            <div class="stats-grid compact">
+                <div class="stat-card primary">
+                    <div class="stat-icon">
+                        <i class="fas fa-archive"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3>Total Items</h3>
+                        <div class="stat-value">{{ cache_stats.total_cached }}</div>
+                    </div>
+                </div>
+
+                <div class="stat-card success">
+                    <div class="stat-icon">
+                        <i class="fas fa-weight-hanging"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3>Total Size</h3>
+                        <div class="stat-value">{{ cache_stats.cache_size_kb }}</div>
+                        <div class="stat-subtext">kB</div>
+                    </div>
+                </div>
+
+                <div class="stat-card info">
+                    <div class="stat-icon">
+                        <i class="fas fa-layer-group"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3>Content Types</h3>
+                        <div class="stat-value">{{ cache_stats.cache_by_type|length }}</div>
+                        <div class="stat-subtext">Different types</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panels-grid">
+                <!-- Cache Actions -->
+                <div class="panel cache-actions">
+                    <div class="panel-header">
+                        <h2><i class="fas fa-cogs"></i> Cache Controls</h2>
+                    </div>
+                    <div class="panel-content">
+                        <div class="action-grid">
+                            <button id="clearCacheBtn" class="action-btn danger">
+                                <i class="fas fa-broom"></i>
+                                <span>Clear All Cache</span>
+                                <small>Remove all cached data</small>
+                            </button>
+                            <button id="addTestDataBtn" class="action-btn info">
+                                <i class="fas fa-vial"></i>
+                                <span>Add Test Data</span>
+                                <small>Populate with sample data</small>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Content Type Breakdown -->
+                {% if cache_stats.cache_by_type %}
+                <div class="panel content-types">
+                    <div class="panel-header">
+                        <h2><i class="fas fa-chart-pie"></i> Content Types</h2>
+                    </div>
+                    <div class="panel-content">
+                        <div class="type-list">
+                            {% for item in cache_stats.cache_by_type %}
+                            <div class="type-item">
+                                <div class="type-info">
+                                    <span class="type-name">{{ item.content_type }}</span>
+                                    <span class="type-count">{{ item.count }} items</span>
+                                </div>
+                                <div class="type-size">{{ item.size }} bytes</div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Cached Items -->
+            <div class="panel cached-items">
+                <div class="panel-header">
+                    <h2><i class="fas fa-database"></i> Cached Items ({{ cached_items|length }} total)</h2>
+                    <div class="panel-actions">
+                        <button class="btn btn-secondary btn-sm" onclick="location.reload()">
+                            <i class="fas fa-sync-alt"></i>
+                            Refresh
+                        </button>
+                    </div>
+                </div>
+                <div class="panel-content">
+                    {% if cached_items %}
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>URL</th>
+                                    <th>Content Type</th>
+                                    <th>Cached At</th>
+                                    <th>Size</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in cached_items %}
+                                <tr>
+                                    <td class="url-cell">{{ item.url }}</td>
+                                    <td>
+                                        <span class="content-type-badge">{{ item.content_type }}</span>
+                                    </td>
+                                    <td class="timestamp">{{ item.timestamp }}</td>
+                                    <td class="size">{{ item.size }} bytes</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="empty-state">
+                        <i class="fas fa-database"></i>
+                        <h3>Cache is Empty</h3>
+                        <p>No items are currently cached. Cache will populate automatically as you browse through the proxy.</p>
+                        <div class="empty-state-actions">
+                            <button id="addTestDataBtn2" class="btn btn-primary">
+                                <i class="fas fa-vial"></i>
+                                Add Test Data
+                            </button>
+                            <a href="{{ url_for('index') }}" class="btn btn-secondary">
+                                <i class="fas fa-tachometer-alt"></i>
+                                Go to Dashboard
+                            </a>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Cache actions
+        document.getElementById('clearCacheBtn')?.addEventListener('click', function() {
+            if (confirm('Are you sure you want to clear all cached data? This action cannot be undone.')) {
+                fetch('/api/clear_cache', { method: 'POST' })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            showNotification('Cache cleared successfully', 'success');
+                            setTimeout(() => location.reload(), 1000);
+                        }
+                    });
+            }
+        });
+
+        const addTestData = () => {
+            fetch('/api/add_test_cache', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showNotification('Test cache data added successfully', 'success');
+                        setTimeout(() => location.reload(), 1000);
+                    }
+                });
+        };
+
+        document.getElementById('addTestDataBtn')?.addEventListener('click', addTestData);
+        document.getElementById('addTestDataBtn2')?.addEventListener('click', addTestData);
+
+        // Notification system
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification notification-${type}`;
+            notification.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check' : type === 'error' ? 'exclamation' : 'info'}-circle"></i>
+                <span>${message}</span>
+                <button onclick="this.parentElement.remove()">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            
+            document.body.appendChild(notification);
+            setTimeout(() => notification.classList.add('show'), 100);
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => notification.remove(), 300);
+            }, 4000);
+        }
+    </script>
+</body>
+</html>
